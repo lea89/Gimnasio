@@ -3,11 +3,12 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from .. import crud, schemas, auth
 from ..deps import get_db
+from ..auth import get_current_user
 
 router = APIRouter()
 
 @router.post("/register", response_model=dict)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     existing = crud.get_user_by_username(db, user.username)
     if existing:
         raise HTTPException(status_code=400, detail="username already registered")
