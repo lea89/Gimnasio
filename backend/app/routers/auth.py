@@ -1,25 +1,21 @@
-from sqlalchemy.exc import IntegrityError
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from .. import crud, schemas, auth
-from ..deps import get_db
-from ..auth import get_current_user
+from sqlalchemy.exc import IntegrityError
+
+from app import models, schemas, crud, auth
+from app.deps import get_db
+from app.security import hash_password  # tu función de hash
 
 router = APIRouter()
 
-@router.post("/register", response_model=dict)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    existing = crud.get_user_by_username(db, user.username)
-    from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException, Depends
-from sqlalchemy.orm import Session
-from . import models, schemas
-from .database import get_db
-from .security import hash_password  # tu función de hash
 
+@router.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Crear el usuario
+    """
+    Registra un nuevo usuario.
+    Retorna error si el username o email ya existen.
+    """
     new_user = models.User(
         username=user.username,
         email=user.email,
@@ -32,7 +28,6 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         db.refresh(new_user)
     except IntegrityError as e:
         db.rollback()
-        # Revisar si la violación fue por email o username
         if 'email' in str(e.orig):
             raise HTTPException(status_code=400, detail="Email already registered")
         elif 'username' in str(e.orig):
@@ -43,7 +38,10 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/token", response_model=schemas.Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
     user = crud.authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
