@@ -11,7 +11,6 @@ router = APIRouter()
 def register(user: schemas.UserCreate, db: Session = Depends(get_db), current=Depends(get_current_user)):
     existing = crud.get_user_by_username(db, user.username)
     if existing:
-        return {"error":existing}
         raise HTTPException(status_code=400, detail="username already registered")
     new = crud.create_user(db, user, is_admin=True)
     return {"username": new.username, "id": new.id,"error":existing}
